@@ -19,7 +19,7 @@ class UserInformation(models.Model):
     surname = models.CharField(max_length=100)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     current_assets = models.JSONField(default=dict)
-    risk_group = models.ForeignKey(RiskGroups, on_delete=models.CASCADE)
+    risk_group = models.ForeignKey(RiskGroups, on_delete=models.CASCADE, null=True, blank=True)
     risk_score = models.IntegerField(default=1)
     joining_date = models.DateField(default=datetime.date.today)
     subscription_end_date = models.DateField(null=True, blank=True)
