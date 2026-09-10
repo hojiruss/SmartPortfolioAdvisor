@@ -5,7 +5,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DEBUG: ${DEBUG}
@@ -21,7 +22,7 @@ services:
       - .env
   db:
     image: postgres:latest
-    container_name: shop-postgres
+    container_name: FinancialAdvisorMainDB-Postgres
     environment:
       POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DB_USER}
@@ -29,9 +30,11 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data\
+      - postgres_data:/var/lib/postgresql/data
     env_file:
       - .env
+    healthcheck:
+      test: postgres --user=${DB_USER} --password=${DB_PASSWORD} --execute="SHOW DATABASES;"
 volumes:
   postgres_data:
 
