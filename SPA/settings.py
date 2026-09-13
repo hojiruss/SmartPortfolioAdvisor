@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from dotenv import load_dotenv
 from pathlib import Path
 import os
+from datetime import timedelta as td
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
     'pages.apps.PagesConfig',
     'portfolio.apps.PortfolioConfig',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -49,6 +51,41 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://redis:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication'
+    )
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': td(hours=1),
+    'REFRESH_TOKEN_LIFETIME': td(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+OTP_LENGTH = 6
+OTP_EXPIRY_SECONDS = 180
+OTP_MAX_WRONG_ATTEMPTS = 3
+OTP_RESEND_COOLDOWN_SECONDS = 60
+OTP_MAX_RESEND_PER_HOUR = 60
+
+
+
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
