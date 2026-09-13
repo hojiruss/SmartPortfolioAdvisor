@@ -7,6 +7,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DEBUG: ${DEBUG}
@@ -38,6 +40,19 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  redis:
+    image: redis:latest
+    container_name: SmartPortfolioAdvisor-Redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 volumes:
   postgres_data:
+  redis_data:
 

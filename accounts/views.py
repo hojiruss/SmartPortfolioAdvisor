@@ -72,7 +72,7 @@ class LogoutView(APIView):
     def post(self,request):
         try:
             refresh_token = request.data['refresh']
-            token = RefreshToken(refresh_token)
+            token = RefreshToken(refresh_token) # type: ignore[call-arg]
             token.blacklist()
         except Exception:
             return Response({'error': 'توکن نامعتبر است'},
