@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'billing.apps.BillingConfig',
     'pages.apps.PagesConfig',
     'portfolio.apps.PortfolioConfig',
+    'assessment.apps.AssessmentConfig',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
