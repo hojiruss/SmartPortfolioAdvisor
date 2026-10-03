@@ -14,8 +14,8 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = ['id', 'text','choices']
 
 class AnswerItemSerializer(serializers.ModelSerializer):
-    questions = serializers.PrimaryKeyRelatedField(queryset=Questions.objects.filter(is_active=True))
-    choices = serializers.PrimaryKeyRelatedField(queryset=Choice.objects.all())
+    question = serializers.PrimaryKeyRelatedField(queryset=Questions.objects.filter(is_active=True))
+    choice = serializers.PrimaryKeyRelatedField(queryset=Choice.objects.all())
 
     def validate_data(self, data):
         if data['choices'].question_id != data['questions'].id:
