@@ -58,20 +58,6 @@ class Choice(models.Model):
         db_table = 'choices'
         ordering = ['order']
 
-
-
-class UserAnswers(models.Model):
-    assessment = models.ForeignKey(RiskAssessment, on_delete=models.CASCADE, related_name='answers')
-    question = models.ForeignKey(Questions, on_delete=models.CASCADE)
-    choice = models.ForeignKey(Choice, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    deleted = models.BooleanField(default=False)
-
-    class Meta:
-        db_table = 'user_answers'
-
-
 class RiskAssessment(models.Model):
     class Status(models.TextChoices):
         IN_PROGRESS = 'IN_PROGRESS'
@@ -132,3 +118,17 @@ class RiskAssessment(models.Model):
 
     class Meta:
         ordering = ['started_at']
+
+
+class UserAnswers(models.Model):
+    assessment = models.ForeignKey(RiskAssessment, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(Questions, on_delete=models.CASCADE)
+    choice = models.ForeignKey(Choice, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'user_answers'
+
+

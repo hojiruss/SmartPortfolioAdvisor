@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Questions, Choice, UserAssessment, UserAnswers
+from .models import Questions, Choice, RiskAssessment, UserAnswers
 
 
 class ChoiceSerializer(serializers.ModelSerializer):
