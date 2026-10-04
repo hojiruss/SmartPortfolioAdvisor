@@ -8,23 +8,23 @@ LOW_ABILITY_RULES = [
 ]
 
 
-def calculate_risk_ability(time_horizon, liquidity, external_resource, impact_of_loss):
+def calculate_risk_ability(time_horizon, liquidity, external_resources, impact_of_loss):
     reason_code = [
         code
         for condition, code in LOW_ABILITY_RULES
-        if condition(time_horizon, liquidity, external_resource, impact_of_loss)
+        if condition(time_horizon, liquidity, external_resources, impact_of_loss)
     ]
 
     if reason_code:
         return 'LOW', reason_code
 
-    if time_horizon == 3 and liquidity == 3 and external_resource == 3 and impact_of_loss == 3:
+    if time_horizon == 3 and liquidity == 3 and external_resources == 3 and impact_of_loss == 3:
         return 'HIGH', ['ALL_ABILITY_FACTORS_STRONG']
 
     return 'MEDIUM', ['MIXED_ABILITY_FACTORS']
 
 def calculate_knowledge_score(correct_answers_count):
-    return rules.KNOWLEDGE_SCORE_MAP(correct_answers_count)
+    return rules.KNOWLEDGE_SCORE_MAP[correct_answers_count]
 
 def apply_perception_knowledge_guardrail(risk_perception_raw, financial_knowledge_score):
     if risk_perception_raw == 5 and financial_knowledge_score <= rules.LOW_KNOWLEDGE_THRESHOLD:
@@ -57,7 +57,7 @@ def apply_low_confidence_guardrail(level, composure_source, past_behavior_confid
         return 'MEDIUM', 'LOW_CONFIDENCE_PAST_BEHAVIOR'
     return level, None
 
-def detect_conflict(tolerance, preference, composure, composure_source):
+def detect_conflicts(tolerance, preference, composure, composure_source):
     severe = False
     reverse = False
 
@@ -108,3 +108,79 @@ def apply_unresolved_conflict_guardrail(base_level, severe_conflict, conflict_re
 
     return base_level, None
 
+def run_assessment(answers):
+    ability_level, ability_reasons = calculate_risk_ability(
+        answers['time_horizon'],
+        answers['liquidity'],
+        answers['external_resources'],
+        answers['impact_of_loss'],
+    )
+
+    knowledge_score = calculate_knowledge_score(answers['knowledge_correct_count'])
+
+    perception_score, perception_reason = apply_perception_knowledge_guardrail(
+        answers['risk_perception_raw'],
+        knowledge_score,
+    )
+
+    composure_source = 'OBSERVED_PAST' if answers['has_loss_experience'] else 'HYPOTHETICAL'
+    composure_score = answers['composure_score']
+    past_behavior_confidence = answers.get('past_behavior_confidence') if composure_score == 'OBSERVED_PAST' else None
+
+    behavioral_score = calculate_behavioral_score(
+        answers['risk_tolerance'], answers['risk_preference'],
+        knowledge_score, perception_score,
+        answers['investing_experience'], composure_score,
+    )
+
+    behavioral_level = classify_behavioral_level(behavioral_score)
+    behavioral_level, high_guardrail_reason = apply_behavioral_high_guardrail(
+        behavioral_level, behavioral_score, answers['risk_tolerance'], answers['risk_preference'],
+    )
+    behavioral_level, low_confidence_reason = apply_low_confidence_guardrail(
+        behavioral_level, composure_source, past_behavior_confidence,
+    )
+
+    severe_conflict, reversed_conflict = detect_conflicts(
+        answers['risk_tolerance'], answers['risk_preference'], composure_score, composure_source,
+    )
+
+    reason_codes = ability_reasons + [r for r in [perception_reason, high_guardrail_reason, low_confidence_reason] if r]
+
+    result = {
+        'risk_ability_level': ability_level,
+        'behavioral_score': behavioral_score,
+        'behavioral_level': behavioral_level,
+        'financial_knowledge_score': knowledge_score,
+        'risk_perception_score': perception_score,
+        'composure_source': composure_source,
+        'past_behavior_confidence': past_behavior_confidence,
+        'severe_behavioral_conflict': severe_conflict,
+        'reverse_behavioral_conflict': reversed_conflict,
+        'reason_codes': reason_codes,
+    }
+
+    if severe_conflict:
+        result['status'] = 'AWAITING_CONFLICT_RESOLUTION'
+        return result
+
+    confidence = determine_assessment_confidence(severe_conflict, composure_source, past_behavior_confidence)
+    result.update(finalize_assessment(ability_level, behavioral_level, confidence, severe_conflict= False, conflict_resolved= None))
+    return result
+
+def finalize_assessment(ability_level, behavioral_level, confidence, severe_conflict, conflict_resolved):
+    base_level = reconcile_final_level(ability_level, behavioral_level)
+    final_level, unresolved_reason = apply_unresolved_conflict_guardrail(base_level,
+                                                                         severe_conflict,
+                                                                         conflict_resolved)
+    return {
+        'assessment_confidence': confidence,
+        'base_suitable_risk': base_level,
+        'suitable_risk_level': final_level,
+        'unresolved_reason': unresolved_reason,
+        'status': 'COMPLETED',
+    }
+
+def resolved_conflict_and_finalize(ability_level, behavioral_level, conflict_outcome):
+    confidence, conflict_resolved = resolve_conflict_confidence(conflict_outcome)
+    return finalize_assessment(ability_level, behavioral_level, confidence, severe_conflict=True, conflict_resolved=conflict_resolved)
