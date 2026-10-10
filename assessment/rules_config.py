@@ -22,3 +22,42 @@ REVERSE_CONFLICT_COMPOSURE_MIN = 5
 
 RISK_LEVEL_ORDER = {'LOW': 1, 'MEDIUM': 2, 'HIGH': 3}
 RISK_LEVEL_FROM_ORDER = {1: 'LOW', 2: 'MEDIUM', 3: 'HIGH'}
+
+# ---------------------------------------------------------------
+# ساختار پرسش‌نامه: کدام slot ها همیشه الزامی‌اند و کدام شرطی
+# ---------------------------------------------------------------
+ALWAYS_REQUIRED_SLOTS = [
+    'INVESTMENT_GOAL',
+    'TIME_HORIZON',
+    'LIQUIDITY',
+    'EXTERNAL_RESOURCE',
+    'IMPACT_OF_LOSS',
+    'RISK_TOLERANCE',
+    'RISK_PREFERENCE',
+    'RISK_PERCEPTION',
+    'KNOWLEDGE_1',
+    'KNOWLEDGE_2',
+    'KNOWLEDGE_3',
+    'INVESTING_EXPERIENCE',
+    'LOSS_EXPERIENCE',
+]
+
+KNOWLEDGE_SLOTS = ['KNOWLEDGE_1', 'KNOWLEDGE_2', 'KNOWLEDGE_3']
+
+OBSERVED_PAST_SLOTS = ['COMPOSURE_ACTUAL', 'PAST_RISK_AWARENESS']
+
+HYPOTHETICAL_SLOTS = ['COMPOSURE_HYPOTHETICAL']
+
+CONFLICT_SLOT = 'CONFLICT_FOLLOWUP'
+
+OUTCOME_HAS_LOSS = 'HAS_LOSS_EXPERIENCE'
+OUTCOME_NO_LOSS = 'NO_LOSS_EXPERIENCE'
+OUTCOME_CORRECT = 'CORRECT'
+VALID_AWARENESS_OUTCOMES = ('LOW', 'MEDIUM', 'HIGH')
+VALID_CONFLICT_OUTCOMES = ('A', 'B', 'C', 'D')
+
+RESULT_SUMMARIES = {
+    'LOW': 'بر اساس شرایط مالی و پاسخ‌های شما، سطح ریسک پایین برای این سرمایه‌گذاری مناسب‌تر است.',
+    'MEDIUM': 'بر اساس شرایط مالی و پاسخ‌های شما، سطح متوسطی از ریسک برای این سرمایه‌گذاری مناسب‌تر است.',
+    'HIGH': 'بر اساس شرایط مالی و پاسخ‌های شما، ظرفیت و آمادگی بیشتری برای پذیرش نوسان سرمایه‌گذاری دارید.',
+}

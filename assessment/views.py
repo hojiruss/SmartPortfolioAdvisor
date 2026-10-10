@@ -1,76 +1,159 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+import logging
+from django.db import transaction
+from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from . import rules_config as rules
+from . import services
 from .models import Questions, Choice, RiskAssessment, UserAnswers
-from .serializers import QuestionSerializer as qs, SubmitAssessmentSerializer as sas
+from .serializers import (QuestionSerializer,
+                          SubmitAssessmentSerializer,
+                          ResolveConflictSerializer,
+                          AssessmentResultSerializer,)
 
-def classify_risk(score):
-    if score <= 34:
-        return RiskAssessment.RiskProfile.CONSERVATIVE
-    elif score <= 65:
-        return RiskAssessment.RiskProfile.MODERATE
-    return RiskAssessment.RiskProfile.AGGRESSIVE
+logger = logging.getLogger(__name__)
+
+CALCULATION_ERRORS = (ValueError, KeyError, TypeError)
+CALCULATION_FAILED_MESSAGE = 'خطایی در محاسبه‌ی نتیجه رخ داد. لطفاً دوباره تلاش کنید.'
+
+def active_questions():
+    return Questions.objects.filter(is_active=True, deleted = False).prefetch_related(
+        Prefetch('choice', queryset=Choice.objects.filter(deleted=False))
+    )
 
 class QuestionListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        questions = Questions.objects.filter(is_active=True).prefetch_related('choices')
-        serializer = qs(questions, many=True)
-        return Response(serializer.data)
+        questions = active_questions().exclude(slot = rules.CONFLICT_SLOT)
+        return Response(QuestionSerializer(questions, many=True).data)
 
 class SubmitAssessmentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = sas(data=request.data)
+        serializer = SubmitAssessmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        answers = serializer.validated_data['answers']
+        data = serializer.validated_data
+        choice_by_slot = data['choice_by_slot']
 
-        total_score = sum(item['choice'].score for item in answers)
-        risk_profile = classify_risk(total_score)
+        try:
+            engine_input = services.build_engine_input(choice_by_slot)
+            result = services.run_assessment(engine_input)
+        except CALCULATION_ERRORS:
+            logger.exception('Risk Assessment calculation failed')
+            return Response({'error': CALCULATION_FAILED_MESSAGE},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        assessment , _= RiskAssessment.objects.update_or_create(
-            user=request.user,
-            defaults={
-                'score': total_score,
-                'risk_profile': risk_profile,
-            }
-        )
+        awaiting = result['status'] == RiskAssessment.Status.AWAITING_CONFLICT_RESOLUTION
+        conflict_question = None
+        if awaiting:
+            conflict_question = active_questions().filter(slot = rules.CONFLICT_SLOT).first()
+            if conflict_question is None:
+                logger.error('Conflict follow-up question is missing from the questionnaire')
+                return Response({'error': CALCULATION_FAILED_MESSAGE}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        assessment.answers.all().delete()
+        fields = services.build_assessment_fields(engine_input, result)
 
-        UserAnswers.objects.bulk_create([
-            UserAnswers(assessment=assessment, question= item['question'], choice= item['choices'])
-            for item in answers
-        ])
+        with transaction.atomic():
+            RiskAssessment.objects.filter(
+                user = request.user, status = RiskAssessment.Status.AWAITING_CONFLICT_RESOLUTION
+            ).update(status = RiskAssessment.Status.INCOMPLETE)
 
-        return Response({
-            'score': assessment.score,
-            'risk_profile': assessment.risk_profile,
-        }, status=status.HTTP_200_OK)
+            assessment = RiskAssessment(
+                user = request.user,
+                investment_amount=data['investment_amount'],
+                questionnaire_version=data['questionnaire_version'],
+                **fields,
+            )
+            if not awaiting:
+                assessment.completed_at = timezone.now()
+            assessment.save()
+
+            UserAnswers.objects.bulk_create([
+                UserAnswers(assessment=assessment, question=item['question'], choice=item['choice'])
+                for item in data['answers']
+            ])
+
+        if awaiting:
+            return Response({
+                'assessment_id': assessment.id,
+                'status': assessment.status,
+                'conflict_question': QuestionSerializer(conflict_question).data,
+            })
+
+        return Response(AssessmentResultSerializer(assessment).data)
+
+
+class ResolveConflictView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, assessment_id):
+        serializer = ResolveConflictSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        choice = serializer.validated_data['choice']
+
+        with transaction.atomic():
+            assessment = get_object_or_404(
+                RiskAssessment.objects.select_for_update(), pk=assessment_id, user=request.user
+            )
+
+            if assessment.status != RiskAssessment.Status.AWAITING_CONFLICT_RESOLUTION:
+                return Response(
+                    {'error': 'این ارزیابی منتظر پاسخ سوال تکمیلی نیست'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                result = services.resolved_conflict_and_finalize(
+                    assessment.risk_ability_level, assessment.behavioral_level, choice.outcome
+                )
+            except CALCULATION_ERRORS:
+                logger.exception('Conflict resolution failed')
+                return Response({'error': CALCULATION_FAILED_MESSAGE}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            assessment.conflict_answer = choice.outcome
+            assessment.conflict_resolved = result['conflict_resolved']
+            assessment.assessment_confidence = result['assessment_confidence']
+            assessment.base_suitable_risk = result['base_suitable_risk']
+            assessment.suitable_risk_level = result['suitable_risk_level']
+            if result['unresolved_reason']:
+                assessment.reason_codes = assessment.reason_codes + [result['unresolved_reason']]
+            assessment.status = RiskAssessment.Status.COMPLETED
+            assessment.completed_at = timezone.now()
+            assessment.save()
+
+            UserAnswers.objects.create(assessment=assessment, question=choice.question, choice=choice)
+
+        return Response(AssessmentResultSerializer(assessment).data)
+
 
 class AssessmentResultView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        try:
-            assessment = request.user.riskassessment
-        except RiskAssessment.DoesNotExist:
-            return Response(
-                {'error':'هنوز ارزیابی ریسک انجام نداده اید'},
-                status= status.HTTP_404_NOT_FOUND
-            )
-
-        return Response({
-            'score': assessment.score,
-            'risk_profile': assessment.risk_profile,
-            'created_at': assessment.created_at,
-        })
+        assessment = (
+            RiskAssessment.objects
+            .filter(user=request.user, status=RiskAssessment.Status.COMPLETED)
+            .order_by('-completed_at')
+            .first()
+        )
+        if assessment is None:
+            return Response({'error': 'هنوز ارزیابی ریسک انجام نداده‌اید'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(AssessmentResultSerializer(assessment).data)
 
 
+class AssessmentHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
 
-
-
-# Create your views here.
+    def get(self, request):
+        assessments = (
+            RiskAssessment.objects
+            .filter(user=request.user, status=RiskAssessment.Status.COMPLETED)
+            .order_by('-completed_at')
+        )
+        return Response(AssessmentResultSerializer(assessments, many=True).data)

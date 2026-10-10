@@ -125,7 +125,7 @@ def run_assessment(answers):
 
     composure_source = 'OBSERVED_PAST' if answers['has_loss_experience'] else 'HYPOTHETICAL'
     composure_score = answers['composure_score']
-    past_behavior_confidence = answers.get('past_behavior_confidence') if composure_score == 'OBSERVED_PAST' else None
+    past_behavior_confidence = answers.get('past_behavior_confidence') if composure_source == 'OBSERVED_PAST' else None
 
     behavioral_score = calculate_behavioral_score(
         answers['risk_tolerance'], answers['risk_preference'],
@@ -183,4 +183,86 @@ def finalize_assessment(ability_level, behavioral_level, confidence, severe_conf
 
 def resolved_conflict_and_finalize(ability_level, behavioral_level, conflict_outcome):
     confidence, conflict_resolved = resolve_conflict_confidence(conflict_outcome)
-    return finalize_assessment(ability_level, behavioral_level, confidence, severe_conflict=True, conflict_resolved=conflict_resolved)
+    result = finalize_assessment(ability_level, behavioral_level, confidence, severe_conflict=True, conflict_resolved=conflict_resolved)
+    result['conflict_resolved'] = conflict_resolved
+    return result
+
+REQUIRED_NUMERIC_INPUTS = [
+    'time_horizon', 'liquidity', 'external_resources', 'impact_of_loss',
+    'risk_tolerance', 'risk_preference', 'risk_perception_raw',
+    'investing_experience', 'composure_score',
+]
+
+
+def build_engine_input(choices_by_slot):
+    has_loss = choices_by_slot['LOSS_EXPERIENCE'].outcome == rules.OUTCOME_HAS_LOSS
+
+    if has_loss:
+        composure_choice = choices_by_slot['COMPOSURE_ACTUAL']
+    else:
+        composure_choice = choices_by_slot['COMPOSURE_HYPOTHETICAL']
+
+    knowledge_correct = sum(
+        1 for slot in rules.KNOWLEDGE_SLOTS
+        if choices_by_slot[slot].outcome == rules.OUTCOME_CORRECT
+    )
+
+    data = {
+        'time_horizon': choices_by_slot['TIME_HORIZON'].value,
+        'liquidity': choices_by_slot['LIQUIDITY'].value,
+        'external_resources': choices_by_slot['EXTERNAL_RESOURCE'].value,
+        'impact_of_loss': choices_by_slot['IMPACT_OF_LOSS'].value,
+        'risk_tolerance': choices_by_slot['RISK_TOLERANCE'].value,
+        'risk_preference': choices_by_slot['RISK_PREFERENCE'].value,
+        'risk_perception_raw': choices_by_slot['RISK_PERCEPTION'].value,
+        'investing_experience': choices_by_slot['INVESTING_EXPERIENCE'].value,
+        'knowledge_correct_count': knowledge_correct,
+        'has_loss_experience': has_loss,
+        'composure_score': composure_choice.value,
+    }
+
+    if has_loss:
+        data['past_behavior_confidence'] = choices_by_slot['PAST_RISK_AWARENESS'].outcome
+
+    missing = [key for key in REQUIRED_NUMERIC_INPUTS if data[key] is None]
+    if missing:
+        raise ValueError(f'گزینه‌هایی بدون مقدار عددی: {missing}')
+
+    if has_loss and data['past_behavior_confidence'] not in rules.VALID_AWARENESS_OUTCOMES:
+        raise ValueError('برچسب آگاهی از ریسک گذشته نامعتبر است')
+
+    return data
+
+
+def build_assessment_fields(engine_input, result):
+    reason_codes = list(result['reason_codes'])
+    if result.get('unresolved_reason'):
+        reason_codes.append(result['unresolved_reason'])
+
+    return {
+        'status': result['status'],
+        'time_horizon_score': engine_input['time_horizon'],
+        'liquidity_score': engine_input['liquidity'],
+        'external_resources_score': engine_input['external_resources'],
+        'impact_of_loss_score': engine_input['impact_of_loss'],
+        'risk_tolerance_score': engine_input['risk_tolerance'],
+        'risk_preference_score': engine_input['risk_preference'],
+        'risk_perception_raw_score': engine_input['risk_perception_raw'],
+        'risk_perception_score': result['risk_perception_score'],
+        'knowledge_correct_answers': engine_input['knowledge_correct_count'],
+        'financial_knowledge_score': result['financial_knowledge_score'],
+        'investing_experience_score': engine_input['investing_experience'],
+        'has_loss_experience': engine_input['has_loss_experience'],
+        'risk_composure_score': engine_input['composure_score'],
+        'composure_source': result['composure_source'],
+        'past_behavior_confidence': result['past_behavior_confidence'],
+        'severe_behavioral_conflict': result['severe_behavioral_conflict'],
+        'reverse_behavioral_conflict': result['reverse_behavioral_conflict'],
+        'risk_ability_level': result['risk_ability_level'],
+        'behavioral_score': result['behavioral_score'],
+        'behavioral_level': result['behavioral_level'],
+        'assessment_confidence': result.get('assessment_confidence'),
+        'base_suitable_risk': result.get('base_suitable_risk'),
+        'suitable_risk_level': result.get('suitable_risk_level'),
+        'reason_codes': reason_codes,
+    }
