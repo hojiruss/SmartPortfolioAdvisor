@@ -182,6 +182,7 @@ QUESTIONNAIRE = [
 def seed_questionnaire(version=1):
     created_questions = 0
     for order, item in enumerate(QUESTIONNAIRE, start=1):
+        print(item['slot'])
         question, created = Questions.objects.get_or_create(
             slot=item['slot'],
             version=version,

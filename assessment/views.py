@@ -22,7 +22,7 @@ CALCULATION_FAILED_MESSAGE = 'خطایی در محاسبه‌ی نتیجه رخ 
 
 def active_questions():
     return Questions.objects.filter(is_active=True, deleted = False).prefetch_related(
-        Prefetch('choice', queryset=Choice.objects.filter(deleted=False))
+        Prefetch('choices', queryset=Choice.objects.filter(deleted=False))
     )
 
 class QuestionListView(APIView):
@@ -39,7 +39,7 @@ class SubmitAssessmentView(APIView):
         serializer = SubmitAssessmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        choice_by_slot = data['choice_by_slot']
+        choice_by_slot = data['choices_by_slot']
 
         try:
             engine_input = services.build_engine_input(choice_by_slot)
@@ -67,6 +67,7 @@ class SubmitAssessmentView(APIView):
             assessment = RiskAssessment(
                 user = request.user,
                 investment_amount=data['investment_amount'],
+                currency=data['currency'],
                 questionnaire_version=data['questionnaire_version'],
                 **fields,
             )

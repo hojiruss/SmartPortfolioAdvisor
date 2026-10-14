@@ -4,11 +4,9 @@ from assessment.seed_data import seed_questionnaire
 
 
 class Command(BaseCommand):
-    help = 'ساخت پرسش‌نامه‌ی ارزیابی ریسک (نسخه‌ی اول) طبق PRD. اجرای دوباره، چیزی را تغییر نمی‌دهد.'
-
     def add_arguments(self, parser):
-        parser.add_argument('--version', type=int, default=1)
+        parser.add_argument('--questionnaire-version', type=int, default=1, dest='questionnaire_version')
 
     def handle(self, *args, **options):
-        created = seed_questionnaire(version=options['version'])
+        created = seed_questionnaire(version=options['questionnaire_version'])
         self.stdout.write(self.style.SUCCESS(f'{created} سوال جدید ساخته شد'))

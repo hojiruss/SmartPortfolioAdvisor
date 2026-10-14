@@ -70,6 +70,10 @@ class RiskAssessment(models.Model):
         MEDIUM = 'MEDIUM'
         HIGH = 'HIGH'
 
+    class Currency(models.TextChoices):
+        IRT = 'IRT', 'Toman'
+        USD = 'USD', 'Dollar'
+
     class ComposureSource(models.TextChoices):
         OBSERVED_PAST = 'OBSERVED_PAST'
         HYPOTHETICAL = 'HYPOTHETICAL'
@@ -82,8 +86,8 @@ class RiskAssessment(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='risk_assessments')
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.IN_PROGRESS)
     investment_goal = models.CharField(max_length=10, blank=True)
-    investment_amount = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
-    currency = models.CharField(max_length=10, default='USDT')
+    investment_amount = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=10, choices=Currency.choices, default=Currency.IRT)
     time_horizon_score = models.FloatField(null=True, blank=True)
     liquidity_score = models.FloatField(null=True, blank=True)
     external_resources_score = models.FloatField(null=True, blank=True)

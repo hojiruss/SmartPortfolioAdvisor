@@ -1,11 +1,13 @@
+from io import StringIO
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.test import SimpleTestCase
+from django.core.management import call_command
+from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APITestCase
 
 from . import services
-from .models import Choice, RiskAssessment, UserAnswers
+from .models import Choice, Questions, RiskAssessment, UserAnswers
 from .seed_data import seed_questionnaire
 
 User = get_user_model()
@@ -312,9 +314,10 @@ def strong_choices(**overrides):
     return {slot: choice for slot, choice in choices.items() if choice is not None}
 
 
-def to_payload(choices, amount='1000'):
+def to_payload(choices, amount='1000', currency='IRT'):
     return {
         'investment_amount': amount,
+        'currency': currency,
         'answers': [{'question': c.question_id, 'choice': c.id} for c in choices.values()],
     }
 
@@ -329,9 +332,9 @@ class AssessmentApiTests(APITestCase):
     def setUp(self):
         self.client.force_authenticate(self.user)
 
-    def submit(self, choices=None, amount='1000'):
+    def submit(self, choices=None, amount='1000', currency='IRT'):
         choices = choices if choices is not None else strong_choices()
-        return self.client.post('/api/assessment/submit/', to_payload(choices, amount), format='json')
+        return self.client.post('/api/assessment/submit/', to_payload(choices, amount, currency), format='json')
 
     # ---------- پرسش‌نامه ----------
     def test_authentication_is_required(self):
@@ -372,6 +375,7 @@ class AssessmentApiTests(APITestCase):
         self.assertEqual(assessment.assessment_confidence, 'HIGH')
         self.assertEqual(assessment.questionnaire_version, 1)
         self.assertEqual(float(assessment.investment_amount), 1000.0)
+        self.assertEqual(assessment.currency, 'IRT')
         self.assertIsNotNone(assessment.completed_at)
         self.assertEqual(assessment.answers.count(), 15)
 
@@ -428,9 +432,33 @@ class AssessmentApiTests(APITestCase):
         self.assertEqual(self.submit(choices).status_code, 400)
 
     def test_investment_amount_must_be_positive(self):
-        for amount in ('0', '-5', 'abc'):
-            self.assertEqual(self.submit(amount=amount).status_code, 400, amount)
+        for currency in ('IRT', 'USD'):
+            for amount in ('0', '-5', 'abc'):
+                self.assertEqual(self.submit(amount=amount, currency=currency).status_code, 400, (currency, amount))
         self.assertEqual(RiskAssessment.objects.count(), 0)
+
+    def test_toman_amount_must_be_a_whole_number(self):
+        self.assertEqual(self.submit(amount='1000.5', currency='IRT').status_code, 400)
+        self.assertEqual(self.submit(amount='5000000', currency='IRT').status_code, 200)
+        self.assertEqual(self.submit(amount='5000000.00', currency='IRT').status_code, 200)
+
+    def test_dollar_amount_accepts_cents_but_no_more(self):
+        response = self.submit(amount='1250.50', currency='USD')
+        self.assertEqual(response.status_code, 200)
+        assessment = RiskAssessment.objects.get(pk=response.data['assessment_id'])
+        self.assertEqual(assessment.currency, 'USD')
+        self.assertEqual(str(assessment.investment_amount), '1250.50')
+        self.assertEqual(self.submit(amount='10.123', currency='USD').status_code, 400)
+
+    def test_currency_is_required_and_must_be_known(self):
+        payload = to_payload(strong_choices())
+        del payload['currency']
+        self.assertEqual(self.client.post('/api/assessment/submit/', payload, format='json').status_code, 400)
+        self.assertEqual(self.submit(currency='EUR').status_code, 400)
+        self.assertEqual(RiskAssessment.objects.count(), 0)
+
+    def test_huge_amount_is_rejected_instead_of_crashing(self):
+        self.assertEqual(self.submit(amount='1' + '0' * 25).status_code, 400)
 
     # ---------- تعارض شدید ----------
     def conflict_choices(self):
@@ -546,3 +574,23 @@ class AssessmentApiTests(APITestCase):
         before = Choice.objects.count()
         self.assertEqual(seed_questionnaire(), 0)
         self.assertEqual(Choice.objects.count(), before)
+
+
+class SeedCommandTests(TestCase):
+    def run_command(self, *args):
+        out = StringIO()
+        call_command('seed_questionnaire', *args, stdout=out)
+        return out.getvalue()
+
+    def test_command_creates_the_questionnaire_and_is_safe_to_repeat(self):
+        self.assertIn('17', self.run_command())
+        self.assertEqual(Questions.objects.count(), 17)
+        self.assertEqual(Choice.objects.count(), 69)
+
+        self.assertIn('0', self.run_command())
+        self.assertEqual(Questions.objects.count(), 17)
+
+    def test_command_can_create_another_version(self):
+        self.run_command()
+        self.run_command('--questionnaire-version', '2')
+        self.assertEqual(Questions.objects.filter(version=2).count(), 17)

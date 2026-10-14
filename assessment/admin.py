@@ -7,7 +7,7 @@ class ChoiceInline(admin.TabularInline):
 
 @admin.register(Questions)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display = ['order', 'slot', 'text', 'version', 'is_active', 'delete']
+    list_display = ['order', 'slot', 'text', 'version', 'is_active', 'deleted']
     list_filter = ['version', 'is_active', 'deleted']
     inlines = [ChoiceInline]
 

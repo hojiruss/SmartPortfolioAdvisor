@@ -20,20 +20,24 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Questions
         fields = ['id', 'slot','text','choices']
 
-class AnswerItemSerializer(serializers.ModelSerializer):
+class AnswerItemSerializer(serializers.Serializer):
     question = serializers.PrimaryKeyRelatedField(queryset=Questions.objects.filter(is_active=True, deleted=False))
     choice = serializers.PrimaryKeyRelatedField(queryset=Choice.objects.filter(deleted=False))
 
-    def validate_data(self, data):
-        if data['choices'].question_id != data['questions'].id:
+    def validate(self, attrs):
+        if attrs['choice'].question_id != attrs['question'].id:
             raise serializers.ValidationError('این گزینه مربوط به این سوال نیست !!')
-        return data
+        return attrs
 
-class SubmitAssessmentSerializer(serializers.ModelSerializer):
-    investment_amount = serializers.IntegerField()
+class SubmitAssessmentSerializer(serializers.Serializer):
+    investment_amount = serializers.DecimalField(max_digits=20, decimal_places=2, min_value=Decimal('0.01'))
+    currency = serializers.ChoiceField(choices=RiskAssessment.Currency.choices)
     answers = AnswerItemSerializer(many=True, allow_empty=False)
 
-    def validate_answers(self, attrs):
+    def validate(self, attrs):
+        if attrs['currency'] == RiskAssessment.Currency.IRT and attrs['investment_amount'] != attrs[
+            'investment_amount'].to_integral_value():
+            raise serializers.ValidationError({'investment_amount': ['مبلغ به تومان باید عدد صحیح باشد']})
         by_slot = {}
         questions = []
 

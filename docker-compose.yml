@@ -22,6 +22,8 @@ services:
       DB_PORT: ${DB_PORT}
     env_file:
       - .env
+    volumes:
+      - .:/app
   db:
     image: postgres:latest
     container_name: FinancialAdvisorMainDB-Postgres
