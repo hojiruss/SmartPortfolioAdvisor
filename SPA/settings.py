@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'pages.apps.PagesConfig',
     'portfolio.apps.PortfolioConfig',
     'assessment.apps.AssessmentConfig',
+    'market.apps.MarketConfig'
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
@@ -175,3 +176,18 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+MARKET_REDIS_URL = os.getenv('MARKET_REDIS_URL', 'redis://redis:6379/2')
+MARKET_PRICE_TTL_SECONDS = 900
+MARKET_STALE_AFTER_SECONDS = 600
+
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_BEAT_SCHEDULE = {
+    'update-market-prices': {
+        'task': 'market.update_prices',
+        'schedule': 300.0,
+    },
+}

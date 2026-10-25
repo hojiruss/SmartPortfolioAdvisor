@@ -1,6 +1,7 @@
 services:
   web:
     build: .
+    image: spa-web
     container_name: web
     ports:
       - "8000:8000"
@@ -54,6 +55,30 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  worker:
+    image: spa-web
+    command: celery -A SPA worker -l info
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+  beat:
+    image: spa-web
+    command: celery -A SPA beat -l info --schedule /tmp/celerybeat-schedule
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
 volumes:
   postgres_data:
   redis_data:
