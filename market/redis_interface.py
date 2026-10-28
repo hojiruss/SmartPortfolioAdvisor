@@ -26,7 +26,7 @@ class RedisInterface:
         except redis.RedisError as exc:
             raise PriceStoreUnavailable(str(exc)) from exc
 
-    def get_all_price(self, symbols=ALL_SYMBOLS):
+    def get_all_prices(self, symbols=ALL_SYMBOLS):
         try:
             raw_values = self.client.mget([KEY_PREFIX + symbol for symbol in symbols])
         except redis.RedisError as exc:
@@ -34,7 +34,7 @@ class RedisInterface:
         return {symbol: json.loads(raw) if raw else None for symbol, raw in zip(symbols, raw_values)}
 
     def get_price(self,symbol):
-        return self.get_all_price([symbol])[symbol]
+        return self.get_all_prices([symbol])[symbol]
 
 
 _store = None

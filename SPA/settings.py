@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'pages.apps.PagesConfig',
     'portfolio.apps.PortfolioConfig',
     'assessment.apps.AssessmentConfig',
-    'market.apps.MarketConfig'
+    'market.apps.MarketConfig',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',

@@ -26,7 +26,7 @@ services:
     volumes:
       - .:/app
   db:
-    image: postgres:latest
+    image: postgres:18
     container_name: FinancialAdvisorMainDB-Postgres
     environment:
       POSTGRES_DB: ${DATABASE_NAME}
@@ -44,7 +44,7 @@ services:
       timeout: 5s
       retries: 5
   redis:
-    image: redis:latest
+    image: redis:8
     container_name: SmartPortfolioAdvisor-Redis
     ports:
       - "6379:6379"
