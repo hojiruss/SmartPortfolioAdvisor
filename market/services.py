@@ -35,7 +35,7 @@ def update_symbol(symbol, store):
         logger.warning('not enough sources for %s: %s/%s', symbol, len(prices), config['min_sources'])
         return False
 
-    store.set_prices(symbol, aggregate(prices), sources_used=len(prices))
+    store.set_price(symbol, aggregate(prices), source_used=len(prices))
     return True
 
 def update_all_prices(store=None):
