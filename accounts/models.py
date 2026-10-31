@@ -17,7 +17,7 @@ class User(AbstractUser):
 class UserInformation(models.Model):
     name = models.CharField(max_length=100)
     surname = models.CharField(max_length=100)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     current_assets = models.JSONField(default=dict)
     risk_group = models.ForeignKey(RiskGroups, on_delete=models.CASCADE, null=True, blank=True)
     risk_score = models.IntegerField(default=1)

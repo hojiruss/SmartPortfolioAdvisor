@@ -5,7 +5,7 @@ from django.db import models
 class Packages(models.Model):
     package_name = models.CharField(max_length=100,unique=True)
     package_description = models.TextField(default="")
-    package_price = models.FloatField(default=0)
+    package_price = models.DecimalField(max_digits=14, decimal_places=0, default=0)
     package_usage = models.IntegerField(default=0) # how many users have this package right now!
     deleted = models.BooleanField(default=False)
     class Meta:
@@ -20,7 +20,7 @@ class RiskGroups(models.Model):
         HIGH_RISK = 'HIGH_RISK'
     risk_group_name = models.CharField(max_length=100,unique=True)
     risk_group_description = models.TextField(default="")
-    risk_factor = models.CharField(choices=RiskFactors.choices)
+    risk_factor = models.CharField(choices=RiskFactors.choices,max_length=20)
     deleted = models.BooleanField(default=False)
     class Meta:
         db_table = 'risk_groups'

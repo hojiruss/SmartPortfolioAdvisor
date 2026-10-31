@@ -22,19 +22,3 @@ class PriceProvider:
 
     def fetch(self) -> Decimal:
         raise NotImplementedError
-
-
-class HttpPriceProvider(PriceProvider):
-    url = 'TODO'
-    headers = {}
-    rial_to_toman = False  # بعضی منبع‌ها ریال می‌دهند؛ True کنید تا بر ۱۰ تقسیم شود
-
-    def extract(self, data):
-        """از پاسخ JSON فقط عدد قیمت را برگردان."""
-        raise NotImplementedError
-
-    def fetch(self):
-        response = requests.get(self.url, headers=self.headers, timeout=self.timeout)
-        response.raise_for_status()
-        price = Decimal(str(self.extract(response.json())))
-        return price / 10 if self.rial_to_toman else price
