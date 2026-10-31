@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(os.environ.get("DEBUG", default=0))
+DEBUG = os.getenv('DEBUG', '0').lower() in ('1', 'true', 'yes')
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS","127.0.0.1").split(",")
 
@@ -70,6 +70,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {'anon': '60/min'},
 }
 
 SIMPLE_JWT = {
@@ -179,7 +186,7 @@ STATIC_URL = 'static/'
 
 
 MARKET_REDIS_URL = os.getenv('MARKET_REDIS_URL', 'redis://redis:6379/2')
-MARKET_PRICE_TTL_SECONDS = 900
+MARKET_PRICE_TTL_SECONDS = 7 * 24 * 3600
 MARKET_STALE_AFTER_SECONDS = 600
 
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')

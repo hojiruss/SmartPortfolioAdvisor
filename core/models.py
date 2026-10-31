@@ -41,10 +41,10 @@ class AcceptedAssetGroup(models.Model):
 
 class AcceptedAssets(models.Model):
     asset_name = models.CharField(max_length=100,unique=True)
-    asset_group_id = models.ForeignKey(AcceptedAssetGroup, on_delete=models.CASCADE)
+    asset_group = models.ForeignKey(AcceptedAssetGroup, on_delete=models.CASCADE)
     asset_description = models.TextField(default="")
     risk_score = models.IntegerField(default=0)
-    risk_group_id = models.ForeignKey(RiskGroups, on_delete=models.CASCADE)
+    risk_group = models.ForeignKey(RiskGroups, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
@@ -52,11 +52,6 @@ class AcceptedAssets(models.Model):
         db_table = 'accepted_assets'
         verbose_name = 'accepted_assets'
         verbose_name_plural = 'accepted_assets'
-
-
-class Risks(models.Model):
-    risk_name = models.CharField(max_length=100,unique=True)
-    risk_description = models.TextField(default="")
 
 
 

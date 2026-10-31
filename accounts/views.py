@@ -1,6 +1,8 @@
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.db import transaction
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from . import services
@@ -11,6 +13,7 @@ from .models import UserInformation
 User = get_user_model()
 
 class RequestOTPView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         serializer = ROS(data = request.data)
         serializer.is_valid(raise_exception=True)
@@ -30,6 +33,7 @@ class RequestOTPView(APIView):
         return Response({'message':'کد ورود ارسال شد'}, status=status.HTTP_200_OK)
 
 class VerifyOTPView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         serializer = VOS(data = request.data)
         serializer.is_valid(raise_exception=True)
@@ -51,14 +55,14 @@ class VerifyOTPView(APIView):
                 {'error': 'تعداد تلاش‌های مجاز تمام شد', 'state': 'max_attempts'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                'username':email,
-            })
-        if created:
-            UserInformation.objects.create(user=user)
+        with transaction.atomic():
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={
+                    'username':email,
+                })
+            if created:
+                UserInformation.objects.create(user=user)
 
         refresh = RefreshToken.for_user(user)
 
@@ -69,6 +73,7 @@ class VerifyOTPView(APIView):
         }, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
+    permission_classes = [AllowAny]
     def post(self,request):
         try:
             refresh_token = request.data['refresh']

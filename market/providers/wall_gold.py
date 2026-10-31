@@ -1,21 +1,22 @@
-import requests as r
+from decimal import Decimal
 from .base import BaseHttpClient, PriceProvider, ExchangeAPIError
 
 
 
 class WallGoldClient(BaseHttpClient, PriceProvider):
+    base_url = 'https://api.wallgold.ir'
+    name = 'wallgold_gold_gram'
 
-    def get_gram_gold_price(self):
+    def fetch(self):
+        data = self._get('/api/v1/markets')
         try:
-            response = r.get(url='https://api.wallgold.ir/api/v1/markets').json()
-            gold_gram_tmn_price = 0
-            for item, value in response.items():
-                if value[0]['symbol'] == 'GLD_18C_750TMN':
-                    gold_gram_tmn_price = value[0]['marketCap']['lastPrice']
-                break
-            return gold_gram_tmn_price
-        except (KeyError, IndexError, TypeError) as exc:
-            raise ExchangeAPIError('WallexClient: unexpected response shape') from exc
+            for markets in data.values():
+                for item in markets:
+                    if item['symbol'] == 'GLD_18C_750TMN':
+                        return Decimal(str(item['marketCap']['lastPrice']))
+        except (KeyError, IndexError, TypeError, AttributeError) as exc:
+            raise ExchangeAPIError('WallGoldClient: unexpected response shape') from exc
+        raise ExchangeAPIError('WallGoldClient: symbol not found')
 
 
 

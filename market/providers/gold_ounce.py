@@ -1,4 +1,4 @@
-import requests as r
+from decimal import Decimal
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -7,16 +7,18 @@ from .base import BaseHttpClient, PriceProvider, ExchangeAPIError
 
 
 class GoldOunce(BaseHttpClient, PriceProvider):
+    base_url = 'https://www.goldapi.io'
+    name = 'goldapi_xau_usd'
 
-    def get_ounce_gold_price(self):
+    def fetch(self):
+        data = self._get(
+            '/api/price/XAU/USD',
+            headers={'x-access-token': os.getenv('GOLD_API_KEY', '')},
+        )
         try:
-            headers = {
-                'x-access-token' : os.getenv('GOLD_API_KEY')
-            }
-            response = r.get(url='https://www.goldapi.io/api/price/XAU/USD', headers= headers).json()
-            return int(response['price'])
-        except (KeyError, IndexError, TypeError) as exc:
-            raise ExchangeAPIError('WallexClient: unexpected response shape') from exc
+            return Decimal(str(data['price']))
+        except (KeyError, TypeError) as exc:
+            raise ExchangeAPIError('GoldOunce: unexpected response shape') from exc
 
 
 
