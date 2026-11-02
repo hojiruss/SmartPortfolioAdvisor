@@ -3,7 +3,7 @@ from .base import BaseHttpClient, ExchangeAPIError, PriceProvider
 
 
 class NobitexClient(BaseHttpClient, PriceProvider):
-    base_url = 'https:/apiv2.nobitex.ir/'
+    base_url = 'https://apiv2.nobitex.ir'
 
     def __init__(self, symbol='USDTIRT'):
         self.symbol = symbol

@@ -15,11 +15,11 @@ class RedisInterface:
         self.client = client
         self.ttl = ttl
 
-    def set_price(self, symbol, price, source_used):
+    def set_price(self, symbol, price, sources_used):
         payload = {
             'price' : format(price, 'f'),
             'updated_at' : datetime.now(tz=timezone.utc).isoformat(),
-            'source_used' : source_used,
+            'sources_used' : sources_used,
         }
         try:
             self.client.set(KEY_PREFIX + symbol, json.dumps(payload), ex=self.ttl)

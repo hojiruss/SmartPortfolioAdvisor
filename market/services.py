@@ -1,7 +1,7 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from statistics import median
-from .providers import SYMBOL_CONFIG as sc
+from .providers import SYMBOL_CONFIG
 from .redis_interface import get_store
 from .symbols import ALL_SYMBOLS
 
@@ -28,7 +28,7 @@ def collect_prices(providers):
     return [price for price in results if price is not None]
 
 def update_symbol(symbol, store):
-    config = sc[symbol]
+    config = SYMBOL_CONFIG[symbol]
     prices = collect_prices(config['providers'])
 
     if len(prices) < config['min_sources']:
