@@ -4,9 +4,13 @@ from statistics import median
 from .providers import SYMBOL_CONFIG
 from .redis_interface import get_store
 from .symbols import ALL_SYMBOLS
+from decimal import Decimal
+
 
 
 logger = logging.getLogger(__name__)
+MAX_SOURCE_SPREAD = Decimal('1.05')
+
 
 def aggregate(prices):
     return median(prices)
@@ -35,7 +39,11 @@ def update_symbol(symbol, store):
         logger.warning('not enough sources for %s: %s/%s', symbol, len(prices), config['min_sources'])
         return False
 
-    store.set_price(symbol, aggregate(prices), source_used=len(prices))
+    if len(prices) >= 2 and max(prices) / min(prices) > MAX_SOURCE_SPREAD:
+        logger.warning('sources disagree for %s: %s', symbol, prices)
+        return False
+
+    store.set_price(symbol, aggregate(prices), sources_used=len(prices))
     return True
 
 def update_all_prices(store=None):

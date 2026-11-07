@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                 ('outcome', models.CharField(blank=True, max_length=200)),
                 ('order', models.PositiveIntegerField(default=0)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('update_at', models.DateTimeField(auto_now=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
                 ('deleted', models.BooleanField(default=False)),
                 ('question', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='choices', to='assessment.questions')),
             ],

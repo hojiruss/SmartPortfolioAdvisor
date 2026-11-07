@@ -8,11 +8,20 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from . import services
 from .serializers import VerifyOTPSerializer as VOS, RequestOTPSerializer as ROS
 from .models import UserInformation
+from rest_framework.throttling import AnonRateThrottle
+from rest_framework_simplejwt.exceptions import TokenError
+
+
+
 
 
 User = get_user_model()
 
+class OTPRateThrottle(AnonRateThrottle):
+    scope = 'otp'
+
 class RequestOTPView(APIView):
+    throttle_classes = [OTPRateThrottle]
     permission_classes = [AllowAny]
     def post(self, request):
         serializer = ROS(data = request.data)
@@ -33,6 +42,7 @@ class RequestOTPView(APIView):
         return Response({'message':'کد ورود ارسال شد'}, status=status.HTTP_200_OK)
 
 class VerifyOTPView(APIView):
+    throttle_classes = [OTPRateThrottle]
     permission_classes = [AllowAny]
     def post(self, request):
         serializer = VOS(data = request.data)
@@ -76,12 +86,9 @@ class LogoutView(APIView):
     permission_classes = [AllowAny]
     def post(self,request):
         try:
-            refresh_token = request.data['refresh']
-            token = RefreshToken(refresh_token) # type: ignore[call-arg]
+            token = RefreshToken(request.data['refresh'])  # type: ignore[call-arg]
             token.blacklist()
-        except Exception:
+        except (KeyError, TypeError, TokenError):
             return Response({'error': 'توکن نامعتبر است'},
                             status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({'message': 'خروج موفق'}, status=status.HTTP_200_OK)
 

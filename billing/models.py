@@ -16,6 +16,8 @@ class UserPayments(models.Model):
     package = models.ForeignKey(Packages, on_delete=models.CASCADE)
     status = models.CharField(
         choices=PaymentStatus.choices,
+        max_length=20,
+        default=PaymentStatus.PROCESSING,
     )
     created_at = models.DateField(default=datetime.date.today)
     updated_at = models.DateField(auto_now=True)

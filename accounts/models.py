@@ -15,8 +15,8 @@ class User(AbstractUser):
         verbose_name = 'users'
 
 class UserInformation(models.Model):
-    name = models.CharField(max_length=100)
-    surname = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, blank=True)
+    surname = models.CharField(max_length=100, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     current_assets = models.JSONField(default=dict)
     risk_group = models.ForeignKey(RiskGroups, on_delete=models.CASCADE, null=True, blank=True)
@@ -25,8 +25,8 @@ class UserInformation(models.Model):
     subscription_end_date = models.DateField(null=True, blank=True)
     package_assigned = models.ForeignKey(Packages, on_delete=models.CASCADE,
                                          null=True, blank=True)
-    created_at = models.DateField(default=datetime.date.today)
-    updated_at = models.DateField(auto_now=True)
+    created_at = models.DateTimeField(default=datetime.date.today)
+    updated_at = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def __str__(self):

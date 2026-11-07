@@ -76,7 +76,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
     ),
-    'DEFAULT_THROTTLE_RATES': {'anon': '60/min'},
+    'DEFAULT_THROTTLE_RATES': {'anon': '60/min', 'otp': '10/min'},
 }
 
 SIMPLE_JWT = {
@@ -143,7 +143,9 @@ DATABASES = {
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT')
+        'PORT': os.getenv('DB_PORT'),
+        'CONN_MAX_AGE': 60,
+        'CONN_HEALTH_CHECKS': True,
     }
 }
 
@@ -197,4 +199,17 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'market.update_prices',
         'schedule': 300.0,
     },
+}
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_SOFT_TIME_LIMIT = 60
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {'format': '{asctime} {levelname} {name} {message}', 'style': '{'},
+    },
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'simple'},
+    },
+    'root': {'handlers': ['console'], 'level': os.getenv('DJANGO_LOGLEVEL', 'INFO')},
 }

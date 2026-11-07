@@ -48,7 +48,7 @@ class Choice(models.Model):
     outcome = models.CharField(max_length=200,blank=True)
     order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
-    update_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True)
     deleted = models.BooleanField(default=False)
 
     def __str__(self):
@@ -122,6 +122,7 @@ class RiskAssessment(models.Model):
 
     class Meta:
         ordering = ['started_at']
+        indexes = [models.Index(fields=['user', 'status', 'completed_at'])]
 
 
 class UserAnswers(models.Model):
