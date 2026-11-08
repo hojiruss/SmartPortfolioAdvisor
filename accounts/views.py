@@ -88,6 +88,7 @@ class LogoutView(APIView):
         try:
             token = RefreshToken(request.data['refresh'])  # type: ignore[call-arg]
             token.blacklist()
+            return Response({'detail': 'خروج انجام شد'}, status=status.HTTP_200_OK)
         except (KeyError, TypeError, TokenError):
             return Response({'error': 'توکن نامعتبر است'},
                             status=status.HTTP_400_BAD_REQUEST)

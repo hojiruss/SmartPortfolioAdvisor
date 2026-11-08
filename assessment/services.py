@@ -166,7 +166,6 @@ def run_assessment(answers):
         return result
 
     confidence = determine_assessment_confidence(severe_conflict, composure_source, past_behavior_confidence)
-    result.update(finalize_assessment(ability_level, behavioral_level, confidence, severe_conflict= False, conflict_resolved= None))
     result.update(finalize_assessment(ability_level, behavioral_level, behavioral_score, confidence, severe_conflict=False, conflict_resolved=None))
     return result
 
