@@ -214,7 +214,7 @@ class RunAssessmentScenarioTests(SimpleTestCase):
         self.assertNotIn('suitable_risk_level', result)
 
     def test_resolved_conflict_keeps_high_with_medium_confidence(self):
-        result = services.resolved_conflict_and_finalize('HIGH', 'HIGH', 'A')
+        result = services.resolved_conflict_and_finalize('HIGH', 'HIGH', 'A','behavioral_score')
         self.assertEqual(result['status'], 'COMPLETED')
         self.assertEqual(result['suitable_risk_level'], 'HIGH')
         self.assertEqual(result['assessment_confidence'], 'MEDIUM')
@@ -222,7 +222,7 @@ class RunAssessmentScenarioTests(SimpleTestCase):
 
     def test_unresolved_conflict_downgrades_high_to_medium(self):
         for answer in ('C', 'D'):
-            result = services.resolved_conflict_and_finalize('HIGH', 'HIGH', answer)
+            result = services.resolved_conflict_and_finalize('HIGH', 'HIGH', answer,'behavioral_score')
             self.assertEqual(result['suitable_risk_level'], 'MEDIUM', answer)
             self.assertEqual(result['unresolved_reason'], 'UNRESOLVED_BEHAVIORAL_CONFLICT')
             self.assertEqual(result['assessment_confidence'], 'LOW')

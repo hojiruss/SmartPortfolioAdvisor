@@ -41,6 +41,7 @@ class AcceptedAssetGroup(models.Model):
 
 class AcceptedAssets(models.Model):
     asset_name = models.CharField(max_length=100,unique=True)
+    symbol = models.CharField(max_length=20, unique=True, null=True, blank=True)
     asset_group = models.ForeignKey(AcceptedAssetGroup, on_delete=models.CASCADE)
     asset_description = models.TextField(default="")
     risk_score = models.IntegerField(default=0)

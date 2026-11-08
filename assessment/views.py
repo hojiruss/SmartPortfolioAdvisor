@@ -111,7 +111,8 @@ class ResolveConflictView(APIView):
 
             try:
                 result = services.resolved_conflict_and_finalize(
-                    assessment.risk_ability_level, assessment.behavioral_level, choice.outcome
+                    assessment.risk_ability_level, assessment.behavioral_level,
+                    assessment.behavioral_score, choice.outcome
                 )
             except CALCULATION_ERRORS:
                 logger.exception('Conflict resolution failed')
@@ -122,6 +123,8 @@ class ResolveConflictView(APIView):
             assessment.assessment_confidence = result['assessment_confidence']
             assessment.base_suitable_risk = result['base_suitable_risk']
             assessment.suitable_risk_level = result['suitable_risk_level']
+            assessment.risk_score = result['risk_score']
+
             if result['unresolved_reason']:
                 assessment.reason_codes = assessment.reason_codes + [result['unresolved_reason']]
             assessment.status = RiskAssessment.Status.COMPLETED

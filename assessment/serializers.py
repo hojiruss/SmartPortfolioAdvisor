@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import Questions, Choice, RiskAssessment, UserAnswers
 from decimal import Decimal
 from . import rules_config as rules
-
+from .scoring import risk_title
 
 class ChoiceSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
@@ -99,14 +99,18 @@ class ResolveConflictSerializer(serializers.Serializer):
 class AssessmentResultSerializer(serializers.ModelSerializer):
     assessment_id = serializers.IntegerField(source='id', read_only=True)
     summary = serializers.SerializerMethodField()
+    risk_title = serializers.SerializerMethodField()
 
     class Meta:
         model = RiskAssessment
         fields = [
-            'assessment_id', 'status', 'suitable_risk_level', 'summary',
+            'assessment_id', 'status', 'suitable_risk_level', 'summary','risk_title',
             'reason_codes', 'completed_at', 'questionnaire_version', 'scoring_version',
         ]
 
     def get_summary(self, obj):
         return rules.RESULT_SUMMARIES.get(obj.suitable_risk_level)
+
+    def get_risk_title(self, obj):
+        return risk_title(obj.risk_score) if obj.risk_score is not None else None
 

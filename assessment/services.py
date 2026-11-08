@@ -1,4 +1,5 @@
 from . import rules_config as rules
+from .scoring import compute_risk_score
 
 LOW_ABILITY_RULES = [
     (lambda t, l, e, i: t == 1, 'SHORT_TIME_HORIZON'),
@@ -166,9 +167,10 @@ def run_assessment(answers):
 
     confidence = determine_assessment_confidence(severe_conflict, composure_source, past_behavior_confidence)
     result.update(finalize_assessment(ability_level, behavioral_level, confidence, severe_conflict= False, conflict_resolved= None))
+    result.update(finalize_assessment(ability_level, behavioral_level, behavioral_score, confidence, severe_conflict=False, conflict_resolved=None))
     return result
 
-def finalize_assessment(ability_level, behavioral_level, confidence, severe_conflict, conflict_resolved):
+def finalize_assessment(ability_level, behavioral_level, behavioral_score, confidence, severe_conflict, conflict_resolved):
     base_level = reconcile_final_level(ability_level, behavioral_level)
     final_level, unresolved_reason = apply_unresolved_conflict_guardrail(base_level,
                                                                          severe_conflict,
@@ -177,13 +179,14 @@ def finalize_assessment(ability_level, behavioral_level, confidence, severe_conf
         'assessment_confidence': confidence,
         'base_suitable_risk': base_level,
         'suitable_risk_level': final_level,
+        'risk_score': compute_risk_score(final_level, behavioral_score),
         'unresolved_reason': unresolved_reason,
         'status': 'COMPLETED',
     }
 
-def resolved_conflict_and_finalize(ability_level, behavioral_level, conflict_outcome):
+def resolved_conflict_and_finalize(ability_level, behavioral_level, behavioral_score, conflict_outcome):
     confidence, conflict_resolved = resolve_conflict_confidence(conflict_outcome)
-    result = finalize_assessment(ability_level, behavioral_level, confidence, severe_conflict=True, conflict_resolved=conflict_resolved)
+    result = finalize_assessment(ability_level, behavioral_level, behavioral_score, confidence, severe_conflict=True, conflict_resolved=conflict_resolved)
     result['conflict_resolved'] = conflict_resolved
     return result
 
@@ -264,5 +267,6 @@ def build_assessment_fields(engine_input, result):
         'assessment_confidence': result.get('assessment_confidence'),
         'base_suitable_risk': result.get('base_suitable_risk'),
         'suitable_risk_level': result.get('suitable_risk_level'),
+        'risk_score': result.get('risk_score'),
         'reason_codes': reason_codes,
     }

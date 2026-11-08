@@ -113,6 +113,7 @@ class RiskAssessment(models.Model):
     assessment_confidence = models.CharField(max_length=10, choices=Confidence.choices, null=True, blank=True)
     base_suitable_risk = models.CharField(max_length=10, choices=Level.choices, null=True, blank=True)
     suitable_risk_level = models.CharField(max_length=10, choices=Level.choices, null=True, blank=True)
+    risk_score = models.PositiveSmallIntegerField(null=True, blank=True)
     reason_codes = models.JSONField(default=list, blank=True)
     questionnaire_version = models.PositiveIntegerField(default=1)
     scoring_version = models.CharField(max_length=20, default='1.0')
